@@ -1,0 +1,13 @@
+{
+    "name": "SHPS4Node-file",
+    "version": "1.0.0",
+    "description": "File IO Module used by SHPS",
+    "author": "Marco Alka <me@marco-alka.de>",
+    "main": "index-file.js",
+    "dependencies": {
+        "node-mod-load": "^2.1.0",
+        "object-assign": ">=2.0.0 < 5",,
+        "q": "^1.2.0",
+        "promise-defer": "^1.0.0"
+    }
+}
