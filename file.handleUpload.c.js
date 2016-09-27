@@ -18,14 +18,14 @@ module.exports = function ($requestState, $fieldName) {
     const filename = libs.SFFM.randomString(8) + '_' + file.filename;
     try {
 
-        fs.access(dir, fs.R_OK | fs.W_OK);
+        fs.accessSync(dir, fs.R_OK | fs.W_OK);
     }
     catch {
 
         fs.mkdirSync(dir, 0o644);
     }
 
-    const localFile = fs.open(dir + filename, 'w', 0o644, ($err, $fd) => {
+    fs.open(dir + filename, 'w', 0o644, ($err, $fd) => {
 
         if ($err) {
 
