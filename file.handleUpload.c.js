@@ -7,6 +7,50 @@ const libs = require('node-mod-load').libs;
 const q = require('q');
 
 
+const getMimeTypeID = function ($requestState, $mimeType) {
+    
+    const d = q.defer();
+    
+    libs.sql.newSQL('default', $requestState).done($sql => {
+        
+        const tbl = $sql.openTable('mimeType');
+        $sql.query()
+            .get(tbl.col('ID'))
+            .fulfilling()
+            .eq(tbl.col('name'), $mimeType)
+            .execute()
+            .done($rows => {
+            
+                if ($rows.length > 0) {
+                    
+                    $sql.free();
+                    d.resolve($rows[0].ID);
+                    return;
+                }
+            
+                tbl.insert({
+                    name: $mimeType,
+                }).done(() => {
+                    
+                    $sql.free();
+                    
+                    //TODO: get ID from result object instead of invoking the function again!
+                    getMimeTypeID($requestState, $mimeType).done(d.resolve, d.reject);
+                }, $err => {
+                    
+                    $sql.free();
+                    d.reject($err);
+                });
+            }, $err => {
+            
+                $sql.free();
+                d.reject($err);
+            });
+    }, d.reject);
+    
+    return d.promise;
+};
+
 module.exports = function ($requestState, $fieldName) {
 
     const d = q.defer();
@@ -50,7 +94,7 @@ module.exports = function ($requestState, $fieldName) {
             }
 
             refCount++;
-            fs.write(fd, $data, null, file.encoding, $err => {
+            fs.write(fd, $data, null, file.encoding, ($err, $written) => {
 
                 refCount--;
                 if ($err) {
@@ -58,6 +102,10 @@ module.exports = function ($requestState, $fieldName) {
                     file.fileStream.close();
                     file.uploaded = true;
                     d.reject($err);
+                }
+                else {
+                    
+                    fileSize += $written;
                 }
             });
         };
@@ -85,7 +133,33 @@ module.exports = function ($requestState, $fieldName) {
                     }
                     else {
 
-                        d.resolve(filename);
+                        getMimeTypeID($requestState, file.mimeType).done($mimeType => {
+                        
+                            libs.sql.newSQL('default', $requestState).done($sql => {
+                                
+                                const tblU = $sql.openTable('upload');
+                                const t = ((new Date()).getTime() / 1000) |0;
+                                tblU.insert({
+                                    name: file.name,
+                                    fileName: filename,
+                                    uploadTime: t,
+                                    lastModified: t,
+                                    mimeType: $mimeType,
+                                    hash: '',
+                                    size: fileSize,
+                                    compressedSize: 0,
+                                    dataRoot: '/upload', //TODO: make this more generic
+                                }).done(() => {
+                                    
+                                    $sql.free();
+                                    d.resolve(filename)
+                                }, $err => {
+                                    
+                                    $sql.free();
+                                    d.reject($err);
+                                });
+                            }, d.reject);
+                        }, d.reject);
                     }
                 });
             }
@@ -110,6 +184,8 @@ module.exports = function ($requestState, $fieldName) {
                 .execute()
                 .done($rows => {
 
+                    $sql.free();
+                    
                     var i = 0;
                     const l = $rows.length;
                     while (i < l) {
