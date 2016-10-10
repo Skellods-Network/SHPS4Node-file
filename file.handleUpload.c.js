@@ -64,7 +64,7 @@ module.exports = function ($requestState, $fieldName) {
 
         fs.accessSync(dir, fs.R_OK | fs.W_OK);
     }
-    catch {
+    catch ($err) {
 
         fs.mkdirSync(dir, 0o644);
     }
