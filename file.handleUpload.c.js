@@ -8,11 +8,11 @@ const q = require('q');
 
 
 const getMimeTypeID = function ($requestState, $mimeType) {
-    
+
     const d = q.defer();
-    
+
     libs.sql.newSQL('default', $requestState).done($sql => {
-        
+
         const tbl = $sql.openTable('mimeType');
         $sql.query()
             .get(tbl.col('ID'))
@@ -20,34 +20,34 @@ const getMimeTypeID = function ($requestState, $mimeType) {
             .eq(tbl.col('name'), $mimeType)
             .execute()
             .done($rows => {
-            
+
                 if ($rows.length > 0) {
-                    
+
                     $sql.free();
                     d.resolve($rows[0].ID);
                     return;
                 }
-            
+
                 tbl.insert({
                     name: $mimeType,
                 }).done(() => {
-                    
+
                     $sql.free();
-                    
+
                     //TODO: get ID from result object instead of invoking the function again!
                     getMimeTypeID($requestState, $mimeType).done(d.resolve, d.reject);
                 }, $err => {
-                    
+
                     $sql.free();
                     d.reject($err);
                 });
             }, $err => {
-            
+
                 $sql.free();
                 d.reject($err);
             });
     }, d.reject);
-    
+
     return d.promise;
 };
 
@@ -57,14 +57,14 @@ module.exports = function ($requestState, $fieldName) {
 
     var fileSize = 0;
     const file = $requestState.FILE[$fieldName];
-    const maxFileSize = $requestState.config.generalConfig.uploadQuota;
+    var maxFileSize = $requestState.config.generalConfig.uploadQuota;
     const dir = libs.main.getDir(SHPS_DIR_UPLOAD) + $requestState.config.generalConfig.URL;
     const filename = libs.SFFM.randomString(8) + '_' + file.filename;
     try {
 
         fs.accessSync(dir, fs.R_OK | fs.W_OK);
     }
-    catch ($err) {
+    catch ($e) {
 
         fs.mkdirSync(dir, 0o644);
     }
@@ -104,7 +104,7 @@ module.exports = function ($requestState, $fieldName) {
                     d.reject($err);
                 }
                 else {
-                    
+
                     fileSize += $written;
                 }
             });
@@ -134,9 +134,9 @@ module.exports = function ($requestState, $fieldName) {
                     else {
 
                         getMimeTypeID($requestState, file.mimeType).done($mimeType => {
-                        
+
                             libs.sql.newSQL('default', $requestState).done($sql => {
-                                
+
                                 const tblU = $sql.openTable('upload');
                                 const t = ((new Date()).getTime() / 1000) |0;
                                 tblU.insert({
@@ -150,11 +150,11 @@ module.exports = function ($requestState, $fieldName) {
                                     compressedSize: 0,
                                     dataRoot: '/upload', //TODO: make this more generic
                                 }).done(() => {
-                                    
+
                                     $sql.free();
                                     d.resolve(filename)
                                 }, $err => {
-                                    
+
                                     $sql.free();
                                     d.reject($err);
                                 });
@@ -185,7 +185,7 @@ module.exports = function ($requestState, $fieldName) {
                 .done($rows => {
 
                     $sql.free();
-                    
+
                     var i = 0;
                     const l = $rows.length;
                     while (i < l) {
